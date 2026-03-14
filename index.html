@@ -1,89 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FreshAir Realty Demo</title>
+
+<style>
+
+body{
+font-family:Arial, sans-serif;
+margin:0;
+background:#f4f6f8;
+}
+
+.hero{
+background:url("https://images.unsplash.com/photo-1560518883-ce09059eeffa") center/cover;
+height:420px;
+display:flex;
+align-items:center;
+justify-content:center;
+color:white;
+text-align:center;
+}
+
+.container{
+max-width:900px;
+margin:auto;
+margin-top:-80px;
+}
+
+.card{
+background:white;
+padding:30px;
+border-radius:10px;
+box-shadow:0 10px 25px rgba(0,0,0,0.1);
+}
+
+input,select,textarea{
+width:100%;
+padding:12px;
+margin-top:8px;
+margin-bottom:15px;
+border-radius:6px;
+border:1px solid #ddd;
+}
+
+button{
+background:#0a66c2;
+color:white;
+border:none;
+padding:14px;
+width:100%;
+font-size:16px;
+border-radius:6px;
+cursor:pointer;
+}
+
+button:hover{
+background:#084c93;
+}
+
+.leads{
+margin-top:30px;
+}
+
+.lead{
+background:#f9fafb;
+padding:12px;
+border-radius:6px;
+margin-bottom:10px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="hero">
+<div>
+<h1>FreshAir Realty</h1>
+<p>Find your dream property in New York</p>
+</div>
+</div>
+
+<div class="container">
+
+<div class="card">
+
+<h2>Request Property Consultation</h2>
+
+<form id="leadForm">
+
+<label>Name</label>
+<input name="name" required>
+
+<label>Email</label>
+<input name="email" type="email" required>
+
+<label>Phone</label>
+<input name="phone">
+
+<label>Interested Area</label>
+<select name="location">
+<option>Manhattan</option>
+<option>Brooklyn</option>
+<option>Queens</option>
+</select>
+
+<label>Budget</label>
+<select name="budget">
+<option>$300k - $500k</option>
+<option>$500k - $800k</option>
+<option>$800k+</option>
+</select>
+
+<label>Message</label>
+<textarea name="message"></textarea>
+
+<button type="submit">Submit Inquiry</button>
+
+</form>
+
+</div>
+
+<div class="card leads">
+
+<h3>Recent Leads</h3>
+
+<div id="leadList"></div>
+
+</div>
+
+</div>
+
 <script>
-/* ---- Zapier webhook form handler - paste this whole block ---- */
-(function(){
-  const ZAPIER_WEBHOOK = "https://hooks.zapier.com/hooks/catch/26818877/uxn7mrh/";
 
-  // small helper
-  function el(id){ return document.getElementById(id); }
+const webhook="https://hooks.zapier.com/hooks/catch/26818877/uxn7mrh/"
 
-  // Ensure DOM ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else init();
+const form=document.getElementById("leadForm")
+const leadList=document.getElementById("leadList")
 
-  function init(){
-    const form = el('leadForm');
-    if(!form) return; // no form found, nothing to do
-    const sendBtn = el('sendBtn') || document.createElement('button');
-    const status = el('formStatus') || document.createElement('div');
-    const thankEl = el('thankYou');
+form.addEventListener("submit",async function(e){
 
-    // loadRecentLeads helper (optional - keeps the demo sidebar updated)
-    function loadRecentLeads(){
-      const node = el('recentLeads');
-      if(!node) return;
-      node.innerHTML = '';
-      const arr = JSON.parse(localStorage.getItem('demo_leads')||'[]').slice().reverse();
-      if(!arr.length){ node.innerHTML = '<div class="small">No demo leads yet — submit one.</div>'; return; }
-      arr.forEach(l=>{
-        const d = document.createElement('div'); d.className='lead';
-        d.innerHTML = `<strong>${escapeHtml(l.name||'—')}</strong><div class="small">${escapeHtml(l.email||'—')} • ${escapeHtml(l.location||'—')}</div>`;
-        node.appendChild(d);
-      });
-    }
+e.preventDefault()
 
-    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const data=new FormData(form)
 
-    form.addEventListener('submit', async function(e){
-      e.preventDefault();
-      if(sendBtn) sendBtn.disabled = true;
-      if(status) status.textContent = 'Sending…';
+let lead={}
 
-      const fd = new FormData(form);
-      const payload = {
-        name: fd.get('name') || '',
-        email: fd.get('email') || '',
-        phone: fd.get('phone') || '',
-        location: fd.get('location') || '',
-        budget: fd.get('budget') || '',
-        message: fd.get('message') || '',
-        page_url: window.location.href,
-        page_title: document.title,
-        timestamp: new Date().toISOString(),
-        source: "FreshAir Realty Demo"
-      };
+data.forEach((v,k)=>lead[k]=v)
 
-      try{
-        // use no-cors so static pages can POST to Zapier
-        await fetch(ZAPIER_WEBHOOK, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(payload)
-        });
+lead.page=window.location.href
+lead.timestamp=new Date().toISOString()
 
-        // save locally for demo persistence
-        const arr = JSON.parse(localStorage.getItem('demo_leads')||'[]');
-        arr.push(payload);
-        localStorage.setItem('demo_leads', JSON.stringify(arr));
+await fetch(webhook,{
+method:"POST",
+mode:"no-cors",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify(lead)
+})
 
-        // update UI
-        loadRecentLeads();
-        form.reset();
-        if(form.style) form.style.display = 'none';
-        if(thankEl) thankEl.style.display = '';
-        if(status) status.textContent = 'Lead sent successfully';
-      } catch(err){
-        console.error('Webhook error', err);
-        if(status) status.textContent = 'Error sending — check console';
-      } finally {
-        if(sendBtn) sendBtn.disabled = false;
-      }
-    });
+addLead(lead)
 
-    // initial load for demo list
-    loadRecentLeads();
+form.reset()
 
-  } // init
-})();
+})
+
+function addLead(lead){
+
+let div=document.createElement("div")
+
+div.className="lead"
+
+div.innerHTML=`<b>${lead.name}</b> (${lead.email})<br>
+${lead.location} • ${lead.budget}`
+
+leadList.prepend(div)
+
+}
+
 </script>
+
+</body>
+</html>
