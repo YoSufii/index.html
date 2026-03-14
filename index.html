@@ -1,0 +1,89 @@
+<script>
+/* ---- Zapier webhook form handler - paste this whole block ---- */
+(function(){
+  const ZAPIER_WEBHOOK = "https://hooks.zapier.com/hooks/catch/26818877/uxn7mrh/";
+
+  // small helper
+  function el(id){ return document.getElementById(id); }
+
+  // Ensure DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else init();
+
+  function init(){
+    const form = el('leadForm');
+    if(!form) return; // no form found, nothing to do
+    const sendBtn = el('sendBtn') || document.createElement('button');
+    const status = el('formStatus') || document.createElement('div');
+    const thankEl = el('thankYou');
+
+    // loadRecentLeads helper (optional - keeps the demo sidebar updated)
+    function loadRecentLeads(){
+      const node = el('recentLeads');
+      if(!node) return;
+      node.innerHTML = '';
+      const arr = JSON.parse(localStorage.getItem('demo_leads')||'[]').slice().reverse();
+      if(!arr.length){ node.innerHTML = '<div class="small">No demo leads yet — submit one.</div>'; return; }
+      arr.forEach(l=>{
+        const d = document.createElement('div'); d.className='lead';
+        d.innerHTML = `<strong>${escapeHtml(l.name||'—')}</strong><div class="small">${escapeHtml(l.email||'—')} • ${escapeHtml(l.location||'—')}</div>`;
+        node.appendChild(d);
+      });
+    }
+
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    form.addEventListener('submit', async function(e){
+      e.preventDefault();
+      if(sendBtn) sendBtn.disabled = true;
+      if(status) status.textContent = 'Sending…';
+
+      const fd = new FormData(form);
+      const payload = {
+        name: fd.get('name') || '',
+        email: fd.get('email') || '',
+        phone: fd.get('phone') || '',
+        location: fd.get('location') || '',
+        budget: fd.get('budget') || '',
+        message: fd.get('message') || '',
+        page_url: window.location.href,
+        page_title: document.title,
+        timestamp: new Date().toISOString(),
+        source: "FreshAir Realty Demo"
+      };
+
+      try{
+        // use no-cors so static pages can POST to Zapier
+        await fetch(ZAPIER_WEBHOOK, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+
+        // save locally for demo persistence
+        const arr = JSON.parse(localStorage.getItem('demo_leads')||'[]');
+        arr.push(payload);
+        localStorage.setItem('demo_leads', JSON.stringify(arr));
+
+        // update UI
+        loadRecentLeads();
+        form.reset();
+        if(form.style) form.style.display = 'none';
+        if(thankEl) thankEl.style.display = '';
+        if(status) status.textContent = 'Lead sent successfully';
+      } catch(err){
+        console.error('Webhook error', err);
+        if(status) status.textContent = 'Error sending — check console';
+      } finally {
+        if(sendBtn) sendBtn.disabled = false;
+      }
+    });
+
+    // initial load for demo list
+    loadRecentLeads();
+
+  } // init
+})();
+</script>
